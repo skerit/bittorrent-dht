@@ -73,6 +73,8 @@ function DHT (opts) {
   this.reqs = {}
   this.queue = [].concat(BOOTSTRAP_NODES)
 
+  this.localAddress = opts.localAddress || null;
+
   this.port = 0
   this.requestId = 1
   this.pendingRequests = {}
@@ -150,6 +152,9 @@ DHT.prototype.findPeers = function (num) {
 }
 
 DHT.prototype.listen = function (port, onlistening) {
+
+  var self = this;
+
   if (typeof port === 'function') {
     onlistening = port
     port = undefined
@@ -169,7 +174,25 @@ DHT.prototype.listen = function (port, onlistening) {
   else
     portfinder.getPort(onPort)
 
-  this.socket.bind(port)
+  var options = {
+    port: port
+  };
+
+  if (typeof this.localAddress == 'function') {
+    return this.localAddress(function gotLocalAddress(err, localAddress) {
+
+      if (err != null) {
+        throw err;
+      }
+
+      options.address = localAddress;
+      self.socket.bind(options);
+    });
+  } else if (this.localAddress) {
+    options.address = this.localAddress;
+  }
+
+  this.socket.bind(options)
 }
 
 DHT.prototype._onListening = function () {
